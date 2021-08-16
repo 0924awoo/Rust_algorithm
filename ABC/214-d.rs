@@ -4,12 +4,8 @@ struct PriorityQueue {
 }
 
 impl PriorityQueue {
-    fn new(value: usize, index: usize) -> Self {
-
-        let mut init: Vec<(usize, usize)> = Vec::new();
-        init.push((value, index));
-
-        return PriorityQueue {tree: init, size: 1};
+    fn new() -> Self {
+        return PriorityQueue {tree: Vec::new(), size: 0};
     }
 
     fn add(&mut self, value: usize, index: usize) {
@@ -37,15 +33,18 @@ impl PriorityQueue {
         
     }
 
-    fn head(&mut self) -> (usize, usize) {
-        // remove head and move tail to head
-        let ans = self.tree[0];
+    fn head(&self) -> (usize, usize) {
+        self.tree[0]
+    }
+
+    // remove head and move tail to head
+    fn pop(&mut self) {
         self.size -= 1;
 
       	//println!("{}", self.tree.len()-1);
         if self.size == 0 {
           self.tree.remove(0);
-          return ans;
+          return;
         } else {
             self.tree[0] = self.tree.remove(self.size);
         }
@@ -88,7 +87,6 @@ impl PriorityQueue {
             }
         }
 
-        return ans;
     }
 
     fn size(&self) -> usize {
@@ -96,88 +94,93 @@ impl PriorityQueue {
     }
 }
 
-
-fn Dijkstra(v_num: usize, edges: &Vec<Vec<(usize, usize)>>, start: usize, d: &mut Vec<(usize, i32)>) {
-    // v_num: a number of cities    
-    // edges: edges[city][road's index] = (next city, road's weight)
-    // i.e. edges[city][0] = (3, 6)
-    // start: start city's index
-    // d: d[distination city] = (min weight, prev city)
- 
-    let inf = 1000000000 + 9;
+struct UnionFind {
+    parents: Vec<i32>,
+   }
+   
+   impl UnionFind {
+    fn new(n: usize) -> Self {
+      let mut p: Vec<i32> = vec![-1; n];
+      UnionFind {parents: p}
+    }
     
-    // setting pq
-    let mut pq = PriorityQueue::new(0,start);
-    for i in 0..v_num{
-        if start != i {
-            pq.add(inf, i);
-            d.push((inf, -1));
-        } else {
-            d.push((0, -1));
-        }
+    fn find(&mut self, x: i32) -> i32 {
+      if self.parents[x as usize] < 0 {
+        return x;
+      } else {
+        self.parents[x as usize] = self.find(self.parents[x as usize]);
+        return self.parents[x as usize];
+      }
     }
-
-
-    while pq.size != 0 {
-        // n.0: now_city's weight, n.1: now_city
-        let n = pq.head();
-        let d_now= n.0;
-        let now_city = n.1;
-        for i in 0..edges[now_city].len() {
-            // road.0: destination, road.1: weight
-            let road = edges[now_city][i];
-            let alt = d_now + road.1;
-            if alt < d[road.0].0 {
-                d[road.0] = (alt, now_city as i32);
-                pq.add(alt, road.0);
-            }
-        }
+   
+    fn unite(&mut self, x: i32, y: i32) {
+       let mut px = self.find(x);
+      let mut py = self.find(y);
+      
+      // already united
+      if x == y {
+        return;
+      }
+      
+      // i.e. parents[py]:-4, parents[px]:-2
+      if self.parents[py as usize] < self.parents[px as usize] {
+        let tmp = py;
+        py = px;
+        px = tmp;
+      }
+      self.parents[px as usize] += self.parents[py as usize];
+      self.parents[py as usize] = x;
     }
+    
+    fn size(&mut self, x: i32) -> i32 {
+      let ans = self.find(x);
+      return -self.parents[ans as usize];
+    }
+    
+    fn issame(&mut self, x: i32, y: i32) -> bool {
+      return self.find(x) == self.find(y);
+    }
+    
+}
 
-} 
-
-
-fn main() {
-
-    let inf = 1000000000 + 9;
+fn main(){
 
     let mut s = String::new();
     std::io::stdin().read_line(&mut s).ok();
-    let mut spl = s.trim().split(' ');
-    let mut n: usize = spl.next().unwrap().parse().unwrap();
-    let mut m: usize = spl.next().unwrap().parse().unwrap();
+    let mut n: usize = s.trim().parse().unwrap();
 
-    // set edges 
-    // i.e. e[city][0] = (3, 6) 
-    //  (next city, road's weight)
-    let mut e: Vec<Vec<(usize, usize)>> = vec![Vec::new(); n];
-    for i in 0..m {
+    // set roads (weight, u, v)
+    let mut pq = PriorityQueue::new();
+    let mut roads: Vec<(usize, usize, usize)> = Vec::new();
+    for i in 0..n-1 {
         s.clear();
         std::io::stdin().read_line(&mut s).ok();
         let mut spl = s.trim().split(' ');
-        let mut a: usize = spl.next().unwrap().parse().unwrap();
-        let mut b: usize = spl.next().unwrap().parse().unwrap();
-        let mut c: usize = spl.next().unwrap().parse().unwrap();        
-        e[a-1].push((b-1, c));
-        e[b-1].push((a-1, c));
+        let mut u: usize = spl.next().unwrap().parse().unwrap();
+        let mut v: usize = spl.next().unwrap().parse().unwrap();
+        let mut w: usize = spl.next().unwrap().parse().unwrap(); 
+        roads.push((w, u-1, v-1));
+        pq.add(w, i);
     }
 
-    let mut d0: Vec<(usize, i32)> = vec![(inf, -1); n];
-    let mut dn: Vec<(usize, i32)> = vec![(inf, -1); n];
+    let mut uf = UnionFind::new(n);
+    let mut count: i64 = 0;
 
-    // d0
-    Dijkstra(n, &e, 0, &mut d0);
+    while pq.size != 0 {
+        // r: (weight, index)
+        let r = pq.head();
+        pq.pop();
+        let index = r.1;
 
-    // dn
-    Dijkstra(n, &e, n-1, &mut dn);
-
-    println!("{}", dn[0].0);
-
-    for i in 1..n-1 {
-        println!("{}", d0[i].0 + dn[i].0);
+        let w = roads[index].0;
+        let u = roads[index].1;
+        let v = roads[index].2;
+      
+        count += ((uf.size(u as i32) * uf.size(v as i32)) * (w as i32)) as i64;
+      
+        uf.unite(u as i32, v as i32);
+      
     }
 
-    // city n-1
-    println!("{}", d0[n-1].0);
-
-}
+    println!("{}", count);
+} 

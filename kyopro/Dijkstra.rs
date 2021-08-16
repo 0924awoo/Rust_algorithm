@@ -97,67 +97,87 @@ impl PriorityQueue {
 }
 
 
-fn Dijkstra(v_num: usize, edges: Vec<usize, (usize, usize)>, start: usize) -> Vec<usize> {
-    let INF = 1000000000 + 9;
+fn Dijkstra(v_num: usize, edges: &Vec<Vec<(usize, usize)>>, start: usize, d: &mut Vec<(usize, i32)>) {
+    // v_num: a number of cities    
+    // edges: edges[city][road's index] = (next city, road's weight)
+    // i.e. edges[city][0] = (3, 6)
+    // start: start city's index
+    // d: d[distination city] = (min weight, prev city)
+ 
+    let inf = 1000000000 + 9;
     
-    // setting pq and d
+    // setting pq
     let mut pq = PriorityQueue::new(0,start);
-    let mut d = Vec::new();
-    let mut prev = Vec::new();
     for i in 0..v_num{
         if start != i {
             pq.add(inf, i);
-            d.push(inf);
+            d.push((inf, -1));
         } else {
-            d.push(0);
+            d.push((0, -1));
         }
-        prev.push(-1);
     }
 
-    // setting e
-    let mut e = Vec::new();
-    for i in 0..edges.len() {
-        e.push(edges[i]);
-    }
 
-    
     while pq.size != 0 {
         // n.0: now_city's weight, n.1: now_city
-        let n = pg.head();
+        let n = pq.head();
         let d_now= n.0;
         let now_city = n.1;
-        for i in 0..e[now_city].len() {
+        for i in 0..edges[now_city].len() {
             // road.0: destination, road.1: weight
-            let road = e[now_city][i];
+            let road = edges[now_city][i];
             let alt = d_now + road.1;
-            if alt < d[road.0] {
-                d[road.0] = alt;
-                prev[road.0] = now_city;
-                pg.add(alt, road.0);
+            if alt < d[road.0].0 {
+                d[road.0] = (alt, now_city as i32);
+                pq.add(alt, road.0);
             }
         }
     }
 
-    return d;
 } 
 
 
 fn main() {
 
-  let mut hs = PriorityQueue::new(11, 0);
-  hs.add(13, 1);
-  hs.add(10, 2);
-  hs.add(12, 3);
-  hs.add(4, 4);
-  hs.add(7, 5);
-  hs.add(9, 6);
-  hs.add(4, 7);
-  hs.add(7, 8);
-  hs.add(2, 9);
-  
-  let mut a = (0, 0);
-  for i in 0..10{
-    a = hs.head();
-      println!("{} {}", a.0, a.1);
-  }
+    let inf = 1000000000 + 9;
+
+    let mut s = String::new();
+    std::io::stdin().read_line(&mut s).ok();
+    let mut spl = s.trim().split(' ');
+    let mut n: usize = spl.next().unwrap().parse().unwrap();
+    let mut m: usize = spl.next().unwrap().parse().unwrap();
+
+    // set edges 
+    // i.e. e[city][0] = (3, 6) 
+    //  (next city, road's weight)
+    let mut e: Vec<Vec<(usize, usize)>> = vec![Vec::new(); n];
+    for i in 0..m {
+        s.clear();
+        std::io::stdin().read_line(&mut s).ok();
+        let mut spl = s.trim().split(' ');
+        let mut a: usize = spl.next().unwrap().parse().unwrap();
+        let mut b: usize = spl.next().unwrap().parse().unwrap();
+        let mut c: usize = spl.next().unwrap().parse().unwrap();        
+        e[a-1].push((b-1, c));
+        e[b-1].push((a-1, c));
+    }
+
+    let mut d0: Vec<(usize, i32)> = vec![(inf, -1); n];
+    let mut dn: Vec<(usize, i32)> = vec![(inf, -1); n];
+
+    // d0
+    Dijkstra(n, &e, 0, &mut d0);
+
+    // dn
+    Dijkstra(n, &e, n-1, &mut dn);
+
+    println!("{}", dn[0].0);
+
+    for i in 1..n-1 {
+        println!("{}", d0[i].0 + dn[i].0);
+    }
+
+    // city n-1
+    println!("{}", d0[n-1].0);
+
 }
